@@ -1,0 +1,186 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*-  */
+/*
+ * filetransfer-system.c
+ * Copyright (C) 2013 german <german.andres.moreno@gmail.com>
+ * 
+ * filetransfer-system is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * filetransfer-system is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+#include "filetransfer-system.h"
+
+
+
+/* For testing propose use the local (not installed) ui file */
+/* #define UI_FILE PACKAGE_DATA_DIR"/ui/filetransfer_system.ui" */
+#define UI_FILE "src/filetransfer_system.ui"
+#define TOP_WINDOW "window"
+
+
+G_DEFINE_TYPE (Filetransfersystem, filetransfer_system, GTK_TYPE_APPLICATION);
+
+
+/* Define the private structure in the .c file */
+#define FILETRANSFER_SYSTEM_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), FILETRANSFER_SYSTEM_TYPE_APPLICATION, FiletransfersystemPrivate))
+
+struct _FiletransfersystemPrivate
+{
+	/* ANJUTA: Widgets declaration for filetransfer_system.ui - DO NOT REMOVE */
+	GtkWidget* filechooserbutton2;
+	GtkWidget* liststore1;
+	GtkWidget* label4;
+	GtkEntry* entryPuerto;
+	GtkEntry* entryDireccion;
+	GtkWidget* comboboxTipo;
+};
+
+
+/* Create a new window loading a file */
+static void
+filetransfer_system_new_window (GApplication *app,
+                           GFile        *file)
+{
+	GtkWidget *window;
+
+	GtkBuilder *builder;
+	GError* error = NULL;
+
+	FiletransfersystemPrivate *priv = FILETRANSFER_SYSTEM_GET_PRIVATE(app);
+
+	/* Load UI from file */
+	builder = gtk_builder_new ();
+	if (!gtk_builder_add_from_file (builder, UI_FILE, &error))
+	{
+		g_critical ("Couldn't load builder file: %s", error->message);
+		g_error_free (error);
+	}
+
+	/* Auto-connect signal handlers */
+	gtk_builder_connect_signals (builder, app);
+
+	/* Get the window object from the ui file */
+	window = GTK_WIDGET (gtk_builder_get_object (builder, TOP_WINDOW));
+        if (!window)
+        {
+		g_critical ("Widget \"%s\" is missing in file %s.",
+				TOP_WINDOW,
+				UI_FILE);
+        }
+
+	
+	/* ANJUTA: Widgets initialization for filetransfer_system.ui - DO NOT REMOVE */
+	priv->filechooserbutton2 = GTK_WIDGET (gtk_builder_get_object(builder, "filechooserbutton2"));
+	priv->liststore1 = GTK_WIDGET (gtk_builder_get_object(builder, "liststore1"));
+	priv->label4 = GTK_WIDGET (gtk_builder_get_object(builder, "label4"));
+	priv->entryPuerto = GTK_ENTRY (gtk_builder_get_object(builder, "entryPuerto"));
+	priv->entryDireccion = GTK_ENTRY (gtk_builder_get_object(builder, "entryDireccion"));
+	priv->comboboxTipo = GTK_WIDGET (gtk_builder_get_object(builder, "comboboxTipo"));
+
+	g_object_unref (builder);
+	
+	
+	gtk_window_set_application (GTK_WINDOW (window), GTK_APPLICATION (app));
+	if (file != NULL)
+	{
+		/* TODO: Add code here to open the file in the new window */
+	}
+	gtk_widget_show_all (GTK_WIDGET (window));
+}
+
+
+/* GApplication implementation */
+static void
+filetransfer_system_activate (GApplication *application)
+{
+	filetransfer_system_new_window (application, NULL);
+}
+
+static void
+filetransfer_system_open (GApplication  *application,
+                     GFile        **files,
+                     gint           n_files,
+                     const gchar   *hint)
+{
+	gint i;
+
+	for (i = 0; i < n_files; i++)
+		filetransfer_system_new_window (application, files[i]);
+}
+
+static void
+filetransfer_system_init (Filetransfersystem *object)
+{
+
+}
+
+static void
+filetransfer_system_finalize (GObject *object)
+{
+	G_OBJECT_CLASS (filetransfer_system_parent_class)->finalize (object);
+}
+
+static void
+filetransfer_system_class_init (FiletransfersystemClass *klass)
+{
+	G_APPLICATION_CLASS (klass)->activate = filetransfer_system_activate;
+	G_APPLICATION_CLASS (klass)->open = filetransfer_system_open;
+
+	g_type_class_add_private (klass, sizeof (FiletransfersystemPrivate));
+
+	G_OBJECT_CLASS (klass)->finalize = filetransfer_system_finalize;
+}
+
+Filetransfersystem *
+filetransfer_system_new (void)
+{
+	g_type_init ();
+
+	return g_object_new (filetransfer_system_get_type (),
+	                     "application-id", "org.gnome.filetransfer_system",
+	                     "flags", G_APPLICATION_HANDLES_OPEN,
+	                     NULL);
+}
+
+void
+on_comboboxTipo_changed (GtkComboBox *combobox, gpointer user_data)
+{
+	FiletransfersystemPrivate *priv = FILETRANSFER_SYSTEM_GET_PRIVATE(user_data);
+	gint index = gtk_combo_box_get_active (priv->comboboxTipo);
+	switch (index){
+		case 0:
+				gtk_label_set_label(GTK_LABEL(priv->label4), "Archivo:");
+				gtk_file_chooser_set_action (priv->filechooserbutton2,GTK_FILE_CHOOSER_ACTION_OPEN);
+				gtk_entry_set_text(priv->entryDireccion,"");
+				gtk_editable_set_editable (GTK_EDITABLE(priv->entryDireccion),1);
+				break;
+		case 1:
+				gtk_label_set_label(GTK_LABEL(priv->label4), "Destino:");
+				gtk_file_chooser_set_action (priv->filechooserbutton2,GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER);
+				gtk_editable_set_editable (GTK_EDITABLE(priv->entryDireccion),0);
+				break;
+	}
+	
+}
+
+void
+on_buttonParar_clicked (GtkButton *button, gpointer user_data)
+{
+	FiletransfersystemPrivate *priv = FILETRANSFER_SYSTEM_GET_PRIVATE(user_data);
+	
+}
+
+void
+on_buttonEnviar_clicked (GtkButton *button, gpointer user_data)
+{
+	FiletransfersystemPrivate *priv = FILETRANSFER_SYSTEM_GET_PRIVATE(user_data);
+}
+
